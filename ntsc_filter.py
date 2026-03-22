@@ -67,12 +67,12 @@ SUBCARRIER_AMP_B  = 50        # 戻し時の振幅(50*)
 # ==========================================
 
 # --- VHSエミュレーション切り替え ---
-USE_VHS_MODE      = True     # VHSモードを有効にするか(True/False*)
+USE_VHS_MODE      = False     # VHSモードを有効にするか(True/False*)
                               # Trueにすると以下のVHSエミュレーション設定の項目が反映される。
-                              
+
 # --- VHSエミュレーション設定 ---
 TAPE_SPEED        = "SP"      # テープ速度(SP*/LP/EP) 速度が遅いほど画質が低下。
-VHS_SVIDEO_OUT    = True     # S-Video出力にするか(True/False*)
+VHS_SVIDEO_OUT    = False     # S-Video出力にするか(True/False*)
 VHS_CHROMA_V_BLEND= True      # 垂直方向の色信号合成(True*/False) 
                               # VHS特有の色のボケを再現する。
 VHS_OUT_SHARPEN   = 1.5       # 輪郭の鋭さ(1.0-1.5*-5.0) 
@@ -82,16 +82,14 @@ WAVE_STRENGTH     = 0         # 画面の揺らぎ(0*-10)
 
 # --- ヘッド切り替えノイズ (画面最下部の乱れ) (ランダム化の対象外) ---
 # テープ再生時にヘッドが切り替わる瞬間に発生するノイズ。
-USE_HEAD_SWITCH   = True     # ノイズを出すか(True/False*) ※高さ486px以上推奨
-HEAD_SWITCH_LINES = 4        # 追加：ノイズが出る行数（4*前後が標準）
-HEAD_SWITCH_CURVE = 1.0      # 追加：歪みの鋭さ（1.0*で直線、2.0で急激に曲がる。）
+USE_HEAD_SWITCH   = False     # ノイズを出すか(True/False*) ※高さ486px以上推奨
 HEAD_SWITCH_POINT = 1.0 - (4.5 + 0.01) / 262.5 # " 1.0 - (4.5 + 0.01) / 262.5 "*
 HEAD_SWITCH_PHASE = (1.0 - 0.01) / 262.5       # " (1.0 - 0.01) / 262.5 "*
 HEAD_SWITCH_NOISE = 1.0 / 500 / 262.5          # " 1.0 / 500 / 262.5 "*
 
 # --- その他・デバッグ用 (ランダム化の対象外) ---
 PRECISE_MODE      = False     # Trueにするとノイズ再現を厳密にするが低速になる。(True/False*)
-NOCOLOR_CARRIER   = False     # 色をデコードせず搬送波を直接見る。(True/False*)
+NOCOLOR_SUBCARRIER= False     # 色をデコードせず搬送波を直接見る。(True/False*)
 # ==========================================
 # 【プリセット用エリア】
 # ログファイルの設定やプリセットを以下に貼り付けると、上の基本設定を上書きする。
@@ -142,7 +140,7 @@ if RANDOM_MODE:
     # 固定したいパラメータがある場合、ランダム化した値に上書きする。
     # 使い方： # を外す。行頭を COLOR_BLEED_H, COLOR_BLEED_V 等に合わせる。
     # ---------------------------
-    #VIDEO_NOISE = 4200
+    #USE_VHS_MODE = True
     
 # ==========================================
 
@@ -154,8 +152,6 @@ ntsc._composite_preemphasis = COMPOSITE_PRE
 ntsc._vhs_out_sharpen = VHS_OUT_SHARPEN
 ntsc._vhs_edge_wave = WAVE_STRENGTH
 ntsc._vhs_head_switching = USE_HEAD_SWITCH
-ntsc._vhs_head_switching_lines = HEAD_SWITCH_LINES # 追加
-ntsc._vhs_head_switching_curve = HEAD_SWITCH_CURVE # 追加
 ntsc._vhs_head_switching_point = HEAD_SWITCH_POINT
 ntsc._vhs_head_switching_phase = HEAD_SWITCH_PHASE
 ntsc._vhs_head_switching_phase_noise = HEAD_SWITCH_NOISE
@@ -178,7 +174,7 @@ ntsc._video_noise = VIDEO_NOISE
 ntsc._subcarrier_amplitude = SUBCARRIER_AMP
 ntsc._subcarrier_amplitude_back = SUBCARRIER_AMP_B
 ntsc._emulating_vhs = USE_VHS_MODE
-ntsc._nocolor_subcarrier = NOCOLOR_CARRIER
+ntsc._nocolor_subcarrier = NOCOLOR_SUBCARRIER
 ntsc._vhs_chroma_vert_blend = VHS_CHROMA_V_BLEND
 ntsc._vhs_svideo_out = VHS_SVIDEO_OUT
 ntsc._output_ntsc = OUTPUT_NTSC
@@ -232,7 +228,7 @@ if WRITE_LOG:
 
     counter = 2
     while os.path.exists(txt_path):
-        txt_name = f"{base_name}_ntsc_{timestamp}_{counter}.txt"
+        txt_name = f"{base_name} - {timestamp}_{counter}.txt"
         txt_path = os.path.join(dir_path, txt_name)
         counter += 1
 
@@ -252,8 +248,8 @@ if WRITE_LOG:
         f"SCANLINE_PHASE = {SCANLINE_PHASE} ; SCANLINE_OFFSET = {SCANLINE_OFFSET} ; SUBCARRIER_AMP = {SUBCARRIER_AMP} ; SUBCARRIER_AMP_B = {SUBCARRIER_AMP_B}\n"
         f"USE_VHS_MODE = {USE_VHS_MODE} ; TAPE_SPEED = '{TAPE_SPEED}' ; VHS_SVIDEO_OUT = {VHS_SVIDEO_OUT} ; VHS_CHROMA_V_BLEND = {VHS_CHROMA_V_BLEND}\n"
         f"VHS_OUT_SHARPEN = {VHS_OUT_SHARPEN} ; WAVE_STRENGTH = {WAVE_STRENGTH}\n"
-        f"USE_HEAD_SWITCH = {USE_HEAD_SWITCH} ; LINES = {HEAD_SWITCH_LINES} ; CURVE = {HEAD_SWITCH_CURVE} ; HEAD_SWITCH_POINT = {HEAD_SWITCH_POINT} ; HEAD_SWITCH_PHASE = {HEAD_SWITCH_PHASE} ; HEAD_SWITCH_NOISE = {HEAD_SWITCH_NOISE}\n"
-        f"PRECISE_MODE={PRECISE_MODE} ; NOCOLOR_CARRIER = {NOCOLOR_CARRIER}\n"
+        f"USE_HEAD_SWITCH = {USE_HEAD_SWITCH} ; HEAD_SWITCH_POINT = {HEAD_SWITCH_POINT} ; HEAD_SWITCH_PHASE = {HEAD_SWITCH_PHASE} ; HEAD_SWITCH_NOISE = {HEAD_SWITCH_NOISE}\n"
+        f"PRECISE_MODE = {PRECISE_MODE} ; NOCOLOR_SUBCARRIER = {NOCOLOR_SUBCARRIER}\n"
     )
 
     with open(txt_path, "w", encoding="utf-8") as f:
