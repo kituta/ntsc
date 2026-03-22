@@ -22,7 +22,7 @@ RANDOM_MODE = False
 # 参考：https://www.avartifactatlas.com/tags.html#video
 
 # --- 信号・基本設定 ---
-COMPOSITE_PRE_CUT = 1000000.0 # プリエンファシス（高域強調）の開始閾値
+COMPOSITE_PRE_CUT = 1000000.0 # プリエンファシス（高域強調）の開始閾値(1000000.0*)
 COMPOSITE_PRE     = 0.0       # 信号の強調度(0.0*-8.0) 
                               # 値を上げると信号が強調され、アナログ的な質感が強まる。
 
