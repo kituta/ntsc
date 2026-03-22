@@ -420,7 +420,7 @@ class Ntsc:
                         end_idx = x2 + (width - current_tx)
                         channel[y][current_tx:width] = double_tmp[x2 : int(end_idx)]
 
-            shif = ishif if shy == 0 else shif * 7 / 8
+            shif = ishif if shy == 0 else shif * 0.9 # 揺れの減衰：0.875(7/8*)(標準) -> 0.9(ゆったり)。画面下部のガタつきを滑らかにする。
             tx = 0
             y += 2
             shy += 1
