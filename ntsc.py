@@ -405,54 +405,6 @@ class Ntsc:
             y += 2
             shy += 1
 
-#    def vhs_head_switching(self, yiq: numpy.ndarray, field: int = 0):
-        _, height, width = yiq.shape
-        fY, fI, fQ = yiq
-        twidth = width + width // 10
-        shy = 0
-        noise = 0.0
-        if self._vhs_head_switching_phase_noise != 0.0:
-            x = numpy.int32(self.rand())
-            x = numpy.int32(x * self.rand())
-            x = numpy.int32(x * self.rand())
-            x = numpy.int32(x * self.rand())
-
-            x &= 0x7FFFFFFF
-            x %= 2000000000
-            noise = (x / 1000000000.0 - 1.0) * self._vhs_head_switching_phase_noise
-
-        scanlines = 262.5 if self._output_ntsc else 312.5
-        t = twidth * scanlines
-
-        p_point = int(fmod(self._vhs_head_switching_point + noise, 1.0) * t)
-        y = int(p_point // twidth * 2) + field
-
-        p_phase = int(fmod(self._vhs_head_switching_phase + noise, 1.0) * t)
-        x_orig = p_phase % twidth
-
-        y -= (262 - 240) * 2 if self._output_ntsc else (312 - 288) * 2
-
-        tx = x_orig
-        ishif = x_orig - twidth if x_orig >= twidth // 2 else x_orig
-        shif = 0
-
-        while y < height:
-            if y >= 0:
-                current_tx = tx if shy == 0 else 0
-                if shif != 0:
-                    x2 = (current_tx + twidth + shif) % twidth
-                    for channel in [fY, fI, fQ]:
-                        line = channel[y]
-                        extended = numpy.zeros(twidth, dtype=numpy.int32)
-                        extended[:width] = line
-                        double_ext = numpy.concatenate([extended, extended])
-                        channel[y][current_tx:width] = double_ext[x2 : x2 + (width - current_tx)]
-
-            shif = ishif if shy == 0 else int(shif * 7 / 8)
-            tx = 0
-            y += 2
-            shy += 1
-
     def _chroma_luma_xi(self, fieldno: int, y: int):
         if self._video_scanline_phase_shift == 90:
             return int(fieldno + self._video_scanline_phase_shift_offset + (y >> 1)) & 3
