@@ -140,6 +140,11 @@ if defined USER_PART_COUNT (
 
 if !PART_COUNT! LEQ 0 set /a PART_COUNT=1
 
+:: C案のため PART_COUNT を +1 する。
+:: 「コア数+1 に分割して最後の2パートをくっつけて出力」することで
+:: 出力パート数 = コア数 を実現しつつ切れ端パートを防ぐ。
+set /a PART_COUNT=PART_COUNT + 1
+
 :: 実際の出力パート数（分割数が1なら1、それ以外は PART_COUNT - 1）
 :: OUT_COUNT はここで確定させ、以降の表示に使用する
 if !PART_COUNT! LEQ 1 (
@@ -149,7 +154,7 @@ if !PART_COUNT! LEQ 1 (
 )
 
 echo.
-echo ……っ、起動したわよ。べ、別に待ってたわけじゃないんだからね。
+echo ……っ、起動したわよ。べ、別に待ってたわけじゃないんだから。
 echo 物理コア数: !PHYS_CORES! コア（CPU: !CPU_NAME!）
 echo 分割数: !OUT_COUNT! パートで処理するわよ。文句ないわよね？
 echo.
@@ -359,8 +364,8 @@ set "MSG_DONE_5=……っ、別に急いでたわけじゃないけど。ちゃんとできたわよ。"
 :: 最終パート開始時の台詞（6パターン）
 :: 最後のパートは直前パートと結合して出力するため、他より長くなる場合がある旨を伝える
 set "MSG_LAST_0=最後のもうひと踏ん張りよ。最後だけ少し長くなるかもしれないけど、変に短いパートを作らないための仕様だから諦めなさいよね。"
-set "MSG_LAST_1=読み込めない動画が出ても嫌でしょ？　だから最後のパートをちゃんとまとめてあげてるの。少し長くなるのは仕様よ、仕様。"
-set "MSG_LAST_2=黙って待ってなさいよ。しっかり最後まで面倒みてあげるから。変に短い切れ端なんて作らないわよ、あたしは。"
+set "MSG_LAST_1=読み込めない動画が出ても嫌でしょ？　だから最後のパートはちゃんと末尾までまとめてあげてるの。少し長くなるのは仕様よ、仕様。"
+set "MSG_LAST_2=黙って待ってなさいよ。最後はしっかり末尾まで面倒みてあげるから。変に短い切れ端なんて作らないわよ、あたしは。"
 set "MSG_LAST_3=……やり直すのもめんどくさいし、最後のパートはひとつ前とまとめて出してあげるわよ。少し長くなるけど、文句言わないでよね。"
 set "MSG_LAST_4=……ちょ、何？ あたしの顔に何かついてる？　見てないで処理終わるまで待ってなさいよ。最後は少し長めになるんだから。"
 set "MSG_LAST_5=動画の秒数をあんたのCPUのコア数で割って、最後のパートとひとつ前のパートをくっつけて……ねえ、聞いてんの？　短い切れ端ができないようにしてあげてるのよ。"
@@ -428,29 +433,6 @@ if not defined DONE_SEC set /a DONE_SEC=0
 set /a "DONE_IDX=DONE_SEC/10"
 if !DONE_IDX! GTR 5 set /a DONE_IDX=5
 
-:: --- 最終パートのみ：秒数がゾロ目（00,11,22,33,44,55）なら超デレ台詞 ---
-if !INDEX!==!OUT_COUNT! (
-    set "IS_ZOROI=0"
-    if !DONE_SEC!==0  set "IS_ZOROI=1"
-    if !DONE_SEC!==11 set "IS_ZOROI=1"
-    if !DONE_SEC!==22 set "IS_ZOROI=1"
-    if !DONE_SEC!==33 set "IS_ZOROI=1"
-    if !DONE_SEC!==44 set "IS_ZOROI=1"
-    if !DONE_SEC!==55 set "IS_ZOROI=1"
-
-    if !IS_ZOROI!==1 (
-        echo   → パート !INDEX! 完了。
-        echo.
-        echo   ……ねえ。
-        echo   終わったわよ。全部。
-        echo   ……あんたって、たまにしか来ないじゃない。
-        echo   だから、その、裁断とかそういうのがなくても……来てもいいんだからね。
-        echo   別に、来なくていいけど。来たら……来たら、まあ、相手くらいしてあげるから。
-        echo   ……忘れないでよね。
-        goto AFTER_DONE_MSG
-    )
-)
-
 echo   → パート !INDEX! 完了。!MSG_DONE_%DONE_IDX%!
 
 :AFTER_DONE_MSG
@@ -462,13 +444,36 @@ goto LOOP
 
 :END
 set /a DONE_COUNT=INDEX-1
+
+:: 最終パート完了直後の秒数を取得（11,33,55秒のみデレ台詞）
+for /f "tokens=3 delims=:." %%s in ("%TIME%") do set /a "END_SEC=%%s" 2>nul
+if not defined END_SEC set /a END_SEC=0
+
+set "IS_DERE=0"
+if !END_SEC!==11 set "IS_DERE=1"
+if !END_SEC!==33 set "IS_DERE=1"
+if !END_SEC!==55 set "IS_DERE=1"
+
 echo.
-echo べ、べつにあんたのために裁断してやったんじゃないんだからね！
-echo !DONE_COUNT! パートに分けてあげたわよ。ちゃんと感謝しなさいよね。
-echo ほら、出力フォルダはそこよ。とっとと持っていきなさい。: %OUTDIR%
-echo.
-echo ……ふん、!CPU_NAME! にしては上出来じゃない。
-echo 次はもっといいCPU、買ってもらいなさいよね。……待ってるんだから。
+if !IS_DERE!==1 (
+    echo ……ねえ。
+    echo 終わったわよ。全部。
+    echo !DONE_COUNT! パートに分けてあげたわよ。
+    echo.
+    echo ……あんたって、たまにしか来ないじゃない。
+    echo だから、その、裁断とかそういうのがなくても……来てもいいんだからね。
+    echo 別に、来なくていいけど。来たら……来たら、まあ、相手くらいしてあげるから。
+    echo ……忘れないでよね。
+    echo.
+    echo ほら、これ……、あんたのためにやったんだから……: %OUTDIR%
+) else (
+    echo べ、べつにあんたのために裁断してやったんじゃないんだからね！
+    echo !DONE_COUNT! パートに分けてあげたわよ。ちゃんと感謝しなさいよね。
+    echo ほら、出力フォルダはそこよ。とっとと持っていきなさい。: %OUTDIR%
+    echo.
+    echo ……ふん、!CPU_NAME! にしては上出来じゃない。
+    echo 次はもっといいCPU、買ってもらいなさいよね。……待ってるんだから。
+)
 echo.
 pause
 exit /b 0
