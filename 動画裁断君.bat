@@ -73,10 +73,8 @@ if "%INPUT%"=="" (
 
 :: 再度チェック（空打ちして進もうとした場合）
 if "%INPUT%"=="" (
-    echo.
     echo ちょっと！何も入れないでEnterなんて、ふざけてるの！？
     echo もう知らない！勝手にしなさい！
-    echo.
     pause
     exit /b 1
 )
@@ -103,7 +101,6 @@ if "!IS_IMAGE!"=="1" (
 )
 
 if not exist "%INPUT%" (
-    echo.
     echo ちょっと！そのファイル、存在しないじゃない！
     echo ちゃんと確認してからドロップしなさいよね！
     echo.
@@ -125,9 +122,7 @@ for /f "tokens=2 delims==" %%n in ('wmic cpu get NumberOfCores /value 2^>nul') d
     set /a PHYS_CORES=%%n
 )
 if !PHYS_CORES! LEQ 0 (
-    echo.
     echo ……なんか物理コア数の取得に失敗したわ。しょうがないから4で進めるわよ。
-    echo.
     set /a PHYS_CORES=4
 )
 
@@ -135,9 +130,7 @@ if !PHYS_CORES! LEQ 0 (
 if defined USER_PART_COUNT (
     if not "%USER_PART_COUNT%"=="" (
         set /a PART_COUNT=%USER_PART_COUNT%
-        echo.
         echo あんたが %USER_PART_COUNT% 分割って言うならそうしてあげるわよ。べ、別にいいけど。
-        echo.
     ) else (
         set /a PART_COUNT=!PHYS_CORES!
     )
@@ -147,10 +140,18 @@ if defined USER_PART_COUNT (
 
 if !PART_COUNT! LEQ 0 set /a PART_COUNT=1
 
+:: 実際の出力パート数（分割数が1なら1、それ以外は PART_COUNT - 1）
+:: OUT_COUNT はここで確定させ、以降の表示に使用する
+if !PART_COUNT! LEQ 1 (
+    set /a OUT_COUNT=1
+) else (
+    set /a OUT_COUNT=PART_COUNT - 1
+)
+
 echo.
-echo ……っ、起動したわよ。べ、別に待ってたわけじゃないんだから。
+echo ……っ、起動したわよ。べ、別に待ってたわけじゃないんだからね。
 echo 物理コア数: !PHYS_CORES! コア（CPU: !CPU_NAME!）
-echo 分割数: !PART_COUNT! パートで処理するわよ。文句ないわよね？
+echo 分割数: !OUT_COUNT! パートで処理するわよ。文句ないわよね？
 echo.
 
 :: --- パス情報の取得 ---
@@ -172,11 +173,9 @@ if !errorlevel!==0 (
     echo.
     set /p "OW_CONFIRM=全パート上書きする場合は y を入力しなさい（それ以外でスキップ）: "
     if /i "!OW_CONFIRM!"=="y" (
-        echo.
         echo ……わかった。全部上書きしてあげるわよ。後悔しないでよね。
         set "FFMPEG_OVERWRITE=-y"
     ) else (
-        echo.
         echo ……そう。じゃあ既存ファイルはそのままにしておくわ。
         set "FFMPEG_OVERWRITE=-n"
     )
@@ -206,10 +205,8 @@ if %errorlevel%==0 (
 )
 
 if !TOTALSECONDS! LEQ 0 (
-    echo.
     echo ちょっと！動画の長さが取得できなかったわよ！
     echo そのファイル、本当に正常な動画なの？確認しなさいよね！
-    echo.
     pause
     exit /b 1
 )
@@ -256,53 +253,67 @@ if !TOTALSECONDS! LSS 60 (
 )
 echo.
 
-:: --- DURATION の計算 ---
-:: (総秒数 + X - 1) / X + 1 の整数演算（切り上げ相当＋1で切れ端防止）
-:: これにより最終パートが極端に短くなる（1フレームのみ等）のを防ぐ
-set /a DURATION=(TOTALSECONDS + PART_COUNT - 1) / PART_COUNT + 1
+:: --- DURATION の計算（C案）---
+:: 総秒数を分割数で割り小数点切り上げ。
+:: 最後のパート（PART_COUNT 番目）は出力せず、
+:: 最後から2番目のパート（PART_COUNT-1 番目）を動画末尾まで出力することで
+:: 極端に短い切れ端パートが生まれないようにする。
+:: 分割数が1の場合は全体をそのまま1パートとして出力する。
+set /a DURATION=(TOTALSECONDS + PART_COUNT - 1) / PART_COUNT
+
+:: 最終パートの秒数 = 総秒数 - (OUT_COUNT-1) * DURATION
+set /a LAST_DURATION=TOTALSECONDS - (OUT_COUNT - 1) * DURATION
+set /a LAST_DUR_MIN=LAST_DURATION / 60
+
+:: 最終パート表示文字列を組み立て
+if !LAST_DUR_MIN! GEQ 1 (
+    set "LAST_DUR_STR=最終パート: !LAST_DUR_MIN! 分（!LAST_DURATION! 秒）"
+) else (
+    set "LAST_DUR_STR=最終パート: !LAST_DURATION! 秒"
+)
 
 :: --- 1パートあたりの長さに応じたコメント ---
 set /a DUR_PART_MIN=DURATION/60
 
 if !DURATION! LSS 5 (
-    echo 1パートあたり: !DURATION! 秒。
+    echo 1パートあたり: !DURATION! 秒。 !LAST_DUR_STR!。
     echo ……細かすぎ。こんな裁断、あたしじゃなきゃできないわよ。べ、別に自慢してるわけじゃないけど。
 ) else if !DURATION! LSS 10 (
-    echo 1パートあたり: !DURATION! 秒。
+    echo 1パートあたり: !DURATION! 秒。 !LAST_DUR_STR!。
     echo ……!DURATION!秒か。細かいわね。手際よく切ってあげるから、見ててよね。
 ) else if !DURATION! LSS 20 (
-    echo 1パートあたり: !DURATION! 秒。
+    echo 1パートあたり: !DURATION! 秒。 !LAST_DUR_STR!。
     echo まあ、このくらいが一番やりやすいわよ。……こういう時のためにあたしがいるんだから。
 ) else if !DURATION! LSS 30 (
-    echo 1パートあたり: !DURATION! 秒。
+    echo 1パートあたり: !DURATION! 秒。 !LAST_DUR_STR!。
     echo ……!DURATION!秒ね。悪くない長さじゃない。
     echo こっちもちょうど準備できてたし。……偶然よ、偶然。
 ) else if !DURATION! LSS 60 (
-    echo 1パートあたり: !DURATION! 秒。
+    echo 1パートあたり: !DURATION! 秒。 !LAST_DUR_STR!。
     echo !DURATION!秒か……そんなに長くないじゃない。サクッとやってあげるわよ。
     echo ……終わっても、まだいてもいいんだからね。
 ) else if !DUR_PART_MIN! LSS 5 (
-    echo 1パートあたり: !DUR_PART_MIN! 分（!DURATION! 秒）。
+    echo 1パートあたり: !DUR_PART_MIN! 分（!DURATION! 秒）。 !LAST_DUR_STR!。
     echo コア数と動画によっては、パートも長くなるわよね。当然じゃない。
     echo ……あたしは全然平気よ。長くても付き合ってあげる。
 ) else if !DUR_PART_MIN! LSS 10 (
-    echo 1パートあたり: !DUR_PART_MIN! 分（!DURATION! 秒）。
+    echo 1パートあたり: !DUR_PART_MIN! 分（!DURATION! 秒）。 !LAST_DUR_STR!。
     echo 結構長いわね。それだけ長い動画だったってことよ。
     echo ……まあ、その分だけ時間かかるけど。一緒にいてくれるんでしょ。
 ) else if !DUR_PART_MIN! LSS 20 (
-    echo 1パートあたり: !DUR_PART_MIN! 分（!DURATION! 秒）。
+    echo 1パートあたり: !DUR_PART_MIN! 分（!DURATION! 秒）。 !LAST_DUR_STR!。
     echo ……なかなかの長さね。でも、あたしはちゃんとやってあげるわよ。
     echo たまにしか来ないんだから、せめてこれくらいはね。
 ) else if !DUR_PART_MIN! LSS 30 (
-    echo 1パートあたり: !DUR_PART_MIN! 分（!DURATION! 秒）。
+    echo 1パートあたり: !DUR_PART_MIN! 分（!DURATION! 秒）。 !LAST_DUR_STR!。
     echo ……!DUR_PART_MIN!分もあるじゃない。全部で映画1本分？
     echo ……ま、終わるまで、ここにいてよね。
 ) else if !DUR_PART_MIN! LSS 60 (
-    echo 1パートあたり: !DUR_PART_MIN! 分（!DURATION! 秒）。
+    echo 1パートあたり: !DUR_PART_MIN! 分（!DURATION! 秒）。 !LAST_DUR_STR!。
     echo ……!DUR_PART_MIN!分。1パートがこんなに長いって、どんな動画なの。
     echo まあいいわ。どうせ付き合うって決めたんだから。……覚悟はできてるわよ。
 ) else (
-    echo 1パートあたり: !DUR_PART_MIN! 分（!DURATION! 秒）。
+    echo 1パートあたり: !DUR_PART_MIN! 分（!DURATION! 秒）。 !LAST_DUR_STR!。
     echo ……1パートが1時間以上ってどういうこと。
     echo もう何も言わない。やってあげる。ずっとここにいてあげるから。
 )
@@ -345,12 +356,22 @@ set "MSG_DONE_3=……これでいいんでしょ。文句言わないでよね。"
 set "MSG_DONE_4=はい、完了。……ほら、ありがとうくらい言いなさいよ。"
 set "MSG_DONE_5=……っ、別に急いでたわけじゃないけど。ちゃんとできたわよ。"
 
+:: 最終パート開始時の台詞（6パターン）
+:: 最後のパートは直前パートと結合して出力するため、他より長くなる場合がある旨を伝える
+set "MSG_LAST_0=最後のもうひと踏ん張りよ。最後だけ少し長くなるかもしれないけど、変に短いパートを作らないための仕様だから諦めなさいよね。"
+set "MSG_LAST_1=読み込めない動画が出ても嫌でしょ？　だから最後のパートをちゃんとまとめてあげてるの。少し長くなるのは仕様よ、仕様。"
+set "MSG_LAST_2=黙って待ってなさいよ。しっかり最後まで面倒みてあげるから。変に短い切れ端なんて作らないわよ、あたしは。"
+set "MSG_LAST_3=……やり直すのもめんどくさいし、最後のパートはひとつ前とまとめて出してあげるわよ。少し長くなるけど、文句言わないでよね。"
+set "MSG_LAST_4=……ちょ、何？ あたしの顔に何かついてる？　見てないで処理終わるまで待ってなさいよ。最後は少し長めになるんだから。"
+set "MSG_LAST_5=動画の秒数をあんたのCPUのコア数で割って、最後のパートとひとつ前のパートをくっつけて……ねえ、聞いてんの？　短い切れ端ができないようにしてあげてるのよ。"
+
 :: --- 分割処理ループ ---
 set /a START=0
 set /a INDEX=1
 
 :LOOP
-if !START! GEQ !TOTALSECONDS! goto END
+:: OUT_COUNT 個出力したら終了
+if !INDEX! GTR !OUT_COUNT! goto END
 
 :: 現在時刻の秒数を取得（HH:MM:SS.mm 形式の3番目フィールド）
 for /f "tokens=3 delims=:." %%s in ("%TIME%") do set /a "CUR_SEC=%%s" 2>nul
@@ -358,19 +379,39 @@ if not defined CUR_SEC set /a CUR_SEC=0
 set /a "MSG_IDX=CUR_SEC/10"
 if !MSG_IDX! GTR 5 set /a MSG_IDX=5
 
-echo [パート !INDEX! / !PART_COUNT! を処理中] !MSG_START_%MSG_IDX%!
+:: 最終パート（OUT_COUNT 番目）は専用セリフを表示
+if !INDEX!==!OUT_COUNT! (
+    echo [パート !INDEX! / !OUT_COUNT! を処理中（最終パート）] !MSG_LAST_%MSG_IDX%!
+) else (
+    echo [パート !INDEX! / !OUT_COUNT! を処理中] !MSG_START_%MSG_IDX%!
+)
 
-ffmpeg !FFMPEG_OVERWRITE! -hide_banner -loglevel error ^
-    -i "%INPUT%" ^
-    -ss !START! -t !DURATION! ^
-    -c:v libx264 ^
-    -crf %CFG_CRF% ^
-    -preset %CFG_PRESET% ^
-    -g !GOP_SIZE! ^
-    -keyint_min !GOP_SIZE! ^
-    -sc_threshold 0 ^
-    -an ^
-    "%OUTDIR%\%FNAME%_part!INDEX!%EXT%"
+:: 最終パートは -t を指定せず動画末尾まで出力（C案：切れ端防止）
+if !INDEX!==!OUT_COUNT! (
+    ffmpeg !FFMPEG_OVERWRITE! -hide_banner -loglevel error ^
+        -i "%INPUT%" ^
+        -ss !START! ^
+        -c:v libx264 ^
+        -crf %CFG_CRF% ^
+        -preset %CFG_PRESET% ^
+        -g !GOP_SIZE! ^
+        -keyint_min !GOP_SIZE! ^
+        -sc_threshold 0 ^
+        -an ^
+        "%OUTDIR%\%FNAME%_part!INDEX!%EXT%"
+) else (
+    ffmpeg !FFMPEG_OVERWRITE! -hide_banner -loglevel error ^
+        -i "%INPUT%" ^
+        -ss !START! -t !DURATION! ^
+        -c:v libx264 ^
+        -crf %CFG_CRF% ^
+        -preset %CFG_PRESET% ^
+        -g !GOP_SIZE! ^
+        -keyint_min !GOP_SIZE! ^
+        -sc_threshold 0 ^
+        -an ^
+        "%OUTDIR%\%FNAME%_part!INDEX!%EXT%"
+)
 
 if !errorlevel! neq 0 (
     echo.
@@ -388,7 +429,7 @@ set /a "DONE_IDX=DONE_SEC/10"
 if !DONE_IDX! GTR 5 set /a DONE_IDX=5
 
 :: --- 最終パートのみ：秒数がゾロ目（00,11,22,33,44,55）なら超デレ台詞 ---
-if !INDEX!==!PART_COUNT! (
+if !INDEX!==!OUT_COUNT! (
     set "IS_ZOROI=0"
     if !DONE_SEC!==0  set "IS_ZOROI=1"
     if !DONE_SEC!==11 set "IS_ZOROI=1"
