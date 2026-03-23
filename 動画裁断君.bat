@@ -73,8 +73,10 @@ if "%INPUT%"=="" (
 
 :: 再度チェック（空打ちして進もうとした場合）
 if "%INPUT%"=="" (
+    echo.
     echo ちょっと！何も入れないでEnterなんて、ふざけてるの！？
     echo もう知らない！勝手にしなさい！
+    echo.
     pause
     exit /b 1
 )
@@ -101,6 +103,7 @@ if "!IS_IMAGE!"=="1" (
 )
 
 if not exist "%INPUT%" (
+    echo.
     echo ちょっと！そのファイル、存在しないじゃない！
     echo ちゃんと確認してからドロップしなさいよね！
     echo.
@@ -122,7 +125,9 @@ for /f "tokens=2 delims==" %%n in ('wmic cpu get NumberOfCores /value 2^>nul') d
     set /a PHYS_CORES=%%n
 )
 if !PHYS_CORES! LEQ 0 (
+    echo.
     echo ……なんか物理コア数の取得に失敗したわ。しょうがないから4で進めるわよ。
+    echo.
     set /a PHYS_CORES=4
 )
 
@@ -130,7 +135,9 @@ if !PHYS_CORES! LEQ 0 (
 if defined USER_PART_COUNT (
     if not "%USER_PART_COUNT%"=="" (
         set /a PART_COUNT=%USER_PART_COUNT%
+        echo.
         echo あんたが %USER_PART_COUNT% 分割って言うならそうしてあげるわよ。べ、別にいいけど。
+        echo.
     ) else (
         set /a PART_COUNT=!PHYS_CORES!
     )
@@ -165,9 +172,11 @@ if !errorlevel!==0 (
     echo.
     set /p "OW_CONFIRM=全パート上書きする場合は y を入力しなさい（それ以外でスキップ）: "
     if /i "!OW_CONFIRM!"=="y" (
+        echo.
         echo ……わかった。全部上書きしてあげるわよ。後悔しないでよね。
         set "FFMPEG_OVERWRITE=-y"
     ) else (
+        echo.
         echo ……そう。じゃあ既存ファイルはそのままにしておくわ。
         set "FFMPEG_OVERWRITE=-n"
     )
@@ -197,8 +206,10 @@ if %errorlevel%==0 (
 )
 
 if !TOTALSECONDS! LEQ 0 (
+    echo.
     echo ちょっと！動画の長さが取得できなかったわよ！
     echo そのファイル、本当に正常な動画なの？確認しなさいよね！
+    echo.
     pause
     exit /b 1
 )
