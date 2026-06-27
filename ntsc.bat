@@ -34,7 +34,7 @@ REM -3.14 を numpy / scipy / opencv-python を導入済みのpythonのバージ
 REM py -3.14 ntsc_filter.py | ^ の ntsc_filter.py に ntsc_filter.py の絶対パスを指定する。
 
 ffmpeg -i "%INPUT_VIDEO%" -vf "setpts=PTS-STARTPTS" -f rawvideo -pix_fmt bgr24 - | ^
-py -3.14 ntsc_filter.py | ^
+py -3.14 "%~dp0ntsc_filter.py" | ^
 ffmpeg -f rawvideo -pix_fmt bgr24 -s %WIDTH%x%HEIGHT% -r %FPS% -i - ^
 -c:v libx264 -crf 15 -preset slower -pix_fmt yuv420p -fps_mode passthrough "%OUTPUT_VIDEO%"
 
