@@ -7,7 +7,6 @@ https://note.com/ktt_mee/n/nc1b7fca4ddea
 【使い方】<br>
 ffmpegのPATH設定をする。<br>
 ntsc.bat、ntsc.py、ntsc_filter.py、ringPattern.npyを同じフォルダに入れる。<br>
-ntsc.batを編集で開き、py -3.14 ntsc_filter.py | ^ の ntsc_filter.py に ntsc_filter.py の絶対パスを指定する。<br>
 動画ファイルをntsc.batにドラッグアンドドロップする。<br>
 <br>
 ntsc_filter.py でフィルターの詳細設定を行う。ログファイルのオンオフ、設定のランダム化も可。（ランダム・カモカ）<br>
